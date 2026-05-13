@@ -1,5 +1,8 @@
 const EPSILON = 1e-9;
+// Approximate meters per degree of latitude. Longitude is adjusted separately
+// with cos(latitude) for the current footprint center.
 const METERS_PER_DEGREE = 111320;
+// Prevent division by zero when longitude scaling approaches the poles.
 const MIN_COS_LAT = 1e-6;
 
 function emptyFeatureCollection() {

@@ -1487,9 +1487,9 @@ export class MapApp {
     // Footprint 選択でも bbox へ寄るが、ユーザーが回転した方位・pitch は維持する。
     const footprintBbox = this._featuresToBbox(selectedFeatures)
       ?? this._geometryToBbox(mergedFeature.geometry);
-    const cameraMoved = this.cameraController?.fitBuildingBboxKeepView(footprintBbox) ?? false;
+    const shouldWaitForCamera = this.cameraController?.fitBuildingBboxKeepView(footprintBbox) ?? false;
 
-    this._scheduleSelectedFootprintHeightScan({ waitForMoveEnd: cameraMoved });
+    this._scheduleSelectedFootprintHeightScan({ waitForMoveEnd: shouldWaitForCamera });
 
     this._onZoom();
 
