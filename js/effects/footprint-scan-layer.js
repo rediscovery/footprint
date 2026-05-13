@@ -336,7 +336,7 @@ export class FootprintScanLayer {
   _closeRing(ring) {
     if (!Array.isArray(ring) || !ring.length) return [];
 
-    const closed = ring.map((coord) => [coord[0], coord[1]]);
+    const closed = ring.slice();
     const first = closed[0];
     const last = closed[closed.length - 1];
 
