@@ -1,11 +1,11 @@
 /**
- * map-app.js v25-footprint-three-scan
+ * map-app.js v26-footprint-ring-scan
  * - LOD2 mesh raycast 優先版
  * - feature.id / setFeatureState() を使わない
  * - LOD2 ON 時は GLB mesh を先に raycast
  * - LOD2 mesh に当たれば footprint HIT へ進まない
  * - LOD2 mesh に当たらない場合だけ footprint HIT に fallback
- * - Footprint 選択時のレーザーは MapLibre fill-extrusion ではなく Three.js custom layer で描画
+ * - Footprint 選択時のレーザーは MapLibre fill-extrusion のリングスキャンで描画
  */
 import { state } from '../state.js';
 import { VegetationManager } from './vegetation-manager.js';
@@ -241,10 +241,7 @@ export class MapApp {
     this._heightScanBandWidthM = scanDefaultIsMobile ? 0.3 : 0.2;
     this._heightScanColor = '#ffffff';
 
-    // Footprint 疑似3D用の高さ走査状態。
-    this._footprintHeightScanRaf = null;
     this._footprintHeightScanToken = 0;
-    this._footprintHeightScanActive = false;
 
     // 照明状態
     this._sunAzimuth       = DEFAULT_SUN_AZIMUTH;
@@ -600,20 +597,14 @@ export class MapApp {
 
     if (!this.footprintScanLayer) {
       this.footprintScanLayer = new FootprintScanLayer({
-        customLayerId: 'petiteau-footprint-scan-three-layer',
+        sourceId: 'petiteau-footprint-ring-scan-source',
+        layerId: 'petiteau-footprint-ring-scan-layer',
         durationMs: 6000,
-
-        // PC = 0.2m / mobile = 0.3m
-        pcLaserWidthMeters: 0.2,
-        mobileLaserWidthMeters: 0.3,
-
-        ringColor: 0xffffff,
-        planeColor: 0xffffff,
-        ringOpacity: 0.95,
-        scanPlaneOpacity: 0.14,
-
+        geometryOffsetMeters: 0.12,
         defaultHeightMeters: 10,
         minHeightMeters: 2.5,
+        scanColor: '#26619C',
+        arriveColor: '#40E0D0',
       });
 
       this.footprintScanLayer.addTo(this.map);
@@ -622,6 +613,8 @@ export class MapApp {
 
   _removeSelectedBuildingLayers() {
     [
+      // Legacy fill-extrusion scan layer id. The new footprint ring scan layer
+      // is managed independently by FootprintScanLayer.
       SELECTED_BUILDING_HEIGHT_SCAN,
       SELECTED_BUILDING_EXTRUSION,
       SELECTED_BUILDING_LINE,
@@ -1437,87 +1430,8 @@ export class MapApp {
     return 10;
   }
 
-  _startSelectedFootprintHeightScan({
-    heightM,
-    durationMs = 6000,
-    bandWidthM = this._heightScanBandWidthM,
-    color = this._heightScanColor,
-  } = {}) {
-    this._stopSelectedFootprintHeightScan();
-
-    if (!this.map?.getLayer(SELECTED_BUILDING_HEIGHT_SCAN)) return;
-
-    const h = Math.max(0.1, Number(heightM) || 10);
-    const band = Math.max(0.1, Math.min(0.5, Number(bandWidthM) || 0.2));
-    const duration = Math.max(1, Number(durationMs) || 6000);
-
-    this._footprintHeightScanActive = true;
-    const token = ++this._footprintHeightScanToken;
-    let startTime = null;
-
-    this.map.setPaintProperty(
-      SELECTED_BUILDING_HEIGHT_SCAN,
-      'fill-extrusion-color',
-      color,
-    );
-    this.map.setPaintProperty(
-      SELECTED_BUILDING_HEIGHT_SCAN,
-      'fill-extrusion-opacity',
-      0.92,
-    );
-    this.map.setLayoutProperty(
-      SELECTED_BUILDING_HEIGHT_SCAN,
-      'visibility',
-      'visible',
-    );
-
-    const tick = (now) => {
-      if (
-        token !== this._footprintHeightScanToken ||
-        !this._footprintHeightScanActive ||
-        state.activeBuildingLayerMode !== 'footprint'
-      ) {
-        return;
-      }
-
-      if (startTime === null) startTime = now;
-
-      const elapsed = Math.max(0, now - startTime);
-      const progress = Math.min(1, elapsed / duration);
-
-      const top = h - h * progress;
-      const base = Math.max(0, top - band);
-      const scanHeight = Math.max(base + 0.01, top);
-
-      this.map.setPaintProperty(
-        SELECTED_BUILDING_HEIGHT_SCAN,
-        'fill-extrusion-base',
-        base,
-      );
-      this.map.setPaintProperty(
-        SELECTED_BUILDING_HEIGHT_SCAN,
-        'fill-extrusion-height',
-        scanHeight,
-      );
-
-      if (progress < 1) {
-        this._footprintHeightScanRaf = requestAnimationFrame(tick);
-      } else {
-        this._stopSelectedFootprintHeightScan();
-      }
-    };
-
-    this._footprintHeightScanRaf = requestAnimationFrame(tick);
-  }
-
   _stopSelectedFootprintHeightScan() {
     this._footprintHeightScanToken += 1;
-    this._footprintHeightScanActive = false;
-
-    if (this._footprintHeightScanRaf !== null) {
-      cancelAnimationFrame(this._footprintHeightScanRaf);
-      this._footprintHeightScanRaf = null;
-    }
 
     if (this.footprintScanLayer?.stop) {
       this.footprintScanLayer.stop();
@@ -1571,10 +1485,11 @@ export class MapApp {
     state.selectedChomeId = null;
 
     // Footprint 選択でも bbox へ寄るが、ユーザーが回転した方位・pitch は維持する。
-    // Footprint scan は今回の LOD2 専用版では起動しない。
     const footprintBbox = this._featuresToBbox(selectedFeatures)
       ?? this._geometryToBbox(mergedFeature.geometry);
-    this.cameraController?.fitBuildingBboxKeepView(footprintBbox);
+    const shouldWaitForCamera = this.cameraController?.fitBuildingBboxKeepView(footprintBbox) ?? false;
+
+    this._scheduleSelectedFootprintHeightScan({ waitForMoveEnd: shouldWaitForCamera });
 
     this._onZoom();
 
