@@ -180,6 +180,9 @@ export class FootprintScanLayer {
     const centerLat = this._centerLat(polygons);
     const latPerMeter = 1 / METERS_PER_DEGREE;
     const lngPerMeter = 1 / (
+      // Near ±90°, longitude degrees collapse toward zero width. Clamp the
+      // cosine so the ring still gets a tiny, finite fallback offset instead
+      // of exploding numerically.
       METERS_PER_DEGREE * Math.max(Math.cos((centerLat * Math.PI) / 180), MIN_COS_LAT)
     );
     const deltaLat = this.geometryOffsetMeters * latPerMeter;
@@ -223,6 +226,9 @@ export class FootprintScanLayer {
     const points = this._sanitizeRing(ring);
     if (points.length < 3) return [];
 
+    // GeoJSON exterior rings are typically CCW in lng/lat space. Because this
+    // method starts from the left-hand normal of each edge, CCW rings need a
+    // negative scale to turn that inward-facing normal into an outward offset.
     const outwardScale = this._signedArea(points) >= 0 ? -1 : 1;
     const offset = [];
 
