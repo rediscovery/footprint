@@ -1,0 +1,29 @@
+{
+  "script": "14_bldg_footprint_geojson_to_pmtiles_cli.py",
+  "input_footprint_dir": "/mnt/c/Users/osawa/Desktop/12_bldg_build_footprint_height_vector_v6_bridge_landing_fix/footprint",
+  "output_pmtiles": "/mnt/c/Users/osawa/Desktop/14_pmtiles/bldg_footprint.pmtiles",
+  "ndjson_path": "/mnt/c/Users/osawa/Desktop/14_pmtiles/_tmp_bldg_footprint.ndjson",
+  "layer": "bldg",
+  "minzoom": 14,
+  "maxzoom": 18,
+  "extent_note": "not passed to tippecanoe; v2.x does not support --extent",
+  "keep_props": [
+    "mi",
+    "h",
+    "l2"
+  ],
+  "coord_digits": 7,
+  "tippecanoe_options": {
+    "force": true,
+    "no_feature_limit": true,
+    "no_tile_size_limit": true,
+    "drop_densest": false,
+    "simplify": null
+  },
+  "input_files": 81,
+  "features": 45309,
+  "skipped_features": 0,
+  "pmtiles_size_bytes": 7113399,
+  "pmtiles_size_mb": 6.783866,
+  "elapsed_sec": 20.851439237594604
+}

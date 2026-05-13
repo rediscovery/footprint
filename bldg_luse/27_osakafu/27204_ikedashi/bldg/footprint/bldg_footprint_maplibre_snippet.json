@@ -1,0 +1,36 @@
+{
+  "note": "pmtiles protocol registration is required in MapLibre before using this source.",
+  "source": {
+    "id": "petiteau-bldg-footprint",
+    "type": "vector",
+    "url": "pmtiles://./bldg_footprint.pmtiles"
+  },
+  "layer": {
+    "id": "petiteau-bldg-extrusion",
+    "type": "fill-extrusion",
+    "source": "petiteau-bldg-footprint",
+    "source-layer": "bldg",
+    "minzoom": 14,
+    "paint": {
+      "fill-extrusion-color": [
+        "case",
+        [
+          "==",
+          [
+            "get",
+            "l2"
+          ],
+          1
+        ],
+        "#f4f5f7",
+        "#ffffff"
+      ],
+      "fill-extrusion-height": [
+        "get",
+        "h"
+      ],
+      "fill-extrusion-base": 0,
+      "fill-extrusion-opacity": 0.92
+    }
+  }
+}
