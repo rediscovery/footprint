@@ -1,3 +1,7 @@
+const EPSILON = 1e-9;
+const METERS_PER_DEGREE = 111320;
+const MIN_COS_LAT = 1e-6;
+
 function emptyFeatureCollection() {
   return {
     type: 'FeatureCollection',
@@ -171,9 +175,9 @@ export class FootprintScanLayer {
     if (!polygons.length) return null;
 
     const centerLat = this._centerLat(polygons);
-    const latPerMeter = 1 / 111320;
+    const latPerMeter = 1 / METERS_PER_DEGREE;
     const lngPerMeter = 1 / (
-      111320 * Math.max(Math.cos((centerLat * Math.PI) / 180), 1e-6)
+      METERS_PER_DEGREE * Math.max(Math.cos((centerLat * Math.PI) / 180), MIN_COS_LAT)
     );
     const deltaLat = this.geometryOffsetMeters * latPerMeter;
     const deltaLng = this.geometryOffsetMeters * lngPerMeter;
@@ -231,13 +235,13 @@ export class FootprintScanLayer {
       let ny = prevNormal[1] + nextNormal[1];
       let len = Math.hypot(nx, ny);
 
-      if (!Number.isFinite(len) || len <= 1e-9) {
+      if (!Number.isFinite(len) || len <= EPSILON) {
         nx = nextNormal[0] || prevNormal[0];
         ny = nextNormal[1] || prevNormal[1];
         len = Math.hypot(nx, ny);
       }
 
-      if (!Number.isFinite(len) || len <= 1e-9) {
+      if (!Number.isFinite(len) || len <= EPSILON) {
         offset.push([current[0], current[1]]);
         continue;
       }
@@ -256,7 +260,7 @@ export class FootprintScanLayer {
     const dy = Number(to?.[1]) - Number(from?.[1]);
     const len = Math.hypot(dx, dy);
 
-    if (!Number.isFinite(len) || len <= 1e-9) {
+    if (!Number.isFinite(len) || len <= EPSILON) {
       return [0, 0];
     }
 
